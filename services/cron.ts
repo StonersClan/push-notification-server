@@ -12,8 +12,8 @@ export const addToQueue = (
   aadhaarID: Long.Long,
   time: Date
 ) => {
-  scheduleTask(() => {
-    pushMsgToQueue({
+  scheduleTask(async () => {
+    await pushMsgToQueue({
       serviceProviders: [serviceProviderID],
       aadhaarID,
     });
