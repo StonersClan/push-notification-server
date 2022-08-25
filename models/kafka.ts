@@ -19,3 +19,18 @@ export const registerConsumer = async (
     },
   });
 };
+
+const producer = kafka.producer();
+
+export const pushMsgToQueue = async (msg: any) => {
+  await producer.connect();
+  await producer.send({
+    topic: "quickstart",
+    messages: [
+      {
+        value: JSON.stringify(msg),
+      },
+    ],
+  });
+  await producer.disconnect();
+};
