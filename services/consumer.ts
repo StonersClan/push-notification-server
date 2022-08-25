@@ -1,5 +1,6 @@
 import { types } from "cassandra-driver";
 import client from "../models/cassandra";
+import { randomCodeGenerator } from "../utils";
 import { baseDelay, maxDelay } from "../utils/constants";
 import status from "../utils/status";
 import { addToQueue } from "./cron";
@@ -36,15 +37,15 @@ export const consume = async (msg: any) => {
       continue;
     }
 
-    let delay = addrMappingDetails.rows[0].last_delay;
-    if (delay !== -1) {
+    let delay = addrMappingDetails.rows[0].last_delay as Long.Long;
+    if (delay !== Long.fromNumber(-1)) {
       const date = addrMappingDetails.rows[0].ts as Date;
-      date.setDate(((date.getDate() + delay) as number) ?? 0);
+      date.setTime(date.getTime() + delay.toInt() ?? 0);
       addToQueue(serviceProvider, aadhaarIDLong, date);
 
-      delay *= 2;
+      delay = delay.multiply(Long.fromNumber(2));
 
-      if (delay > maxDelay) {
+      if (delay.subtract(maxDelay).toInt() > 0) {
         await client.execute(
           "UPDATE sih.addr_mapping SET status = ?, last_delay = ? WHERE aadhaar = ? AND sp_id = ?",
           [status.DENIED, -1, aadhaarIDLong, serviceProvider]
@@ -59,11 +60,21 @@ export const consume = async (msg: any) => {
     const pushNotificationDetails = JSON.parse(
       spDetails.rows[0].push_notification_details ?? ""
     );
+
+    const randomCode = randomCodeGenerator(8);
+    await client.execute("INSERT INTO sih.sp_auth_codes (code) VALUES (?)", [
+      randomCode,
+    ]);
+
     if (pushNotificationDetails?.webhook_url) {
-      await hitWebhook(pushNotificationDetails.webhook_url, {
-        aadhaarID: msg.aadhaarID,
-        newAddress: address,
-      });
+      await hitWebhook(
+        pushNotificationDetails.webhook_url,
+        {
+          aadhaarID: msg.aadhaarID,
+          newAddress: address,
+        },
+        randomCode
+      );
     }
   }
 };
