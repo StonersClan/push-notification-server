@@ -21,9 +21,10 @@ export const registerConsumer = async (
 };
 
 const producer = kafka.producer();
+const connect = producer.connect();
 
 export const pushMsgToQueue = async (msg: any) => {
-  await producer.connect();
+  await connect;
   await producer.send({
     topic: "quickstart",
     messages: [
@@ -32,5 +33,4 @@ export const pushMsgToQueue = async (msg: any) => {
       },
     ],
   });
-  await producer.disconnect();
 };

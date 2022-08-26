@@ -16,6 +16,9 @@ export const consume = async (msg: any) => {
     [aadhaarIDLong]
   );
 
+  if (userDetails.rows.length === 0) {
+    return;
+  }
   const address = userDetails.rows[0].addr;
 
   for (const serviceProvider of msg.serviceProviders) {
